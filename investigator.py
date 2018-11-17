@@ -1,5 +1,4 @@
 # coding=utf-8
-import copy
 import queue
 import threading
 import traceback
@@ -11,40 +10,38 @@ from response import ResponseBase
 
 
 class ExecutorBase(threading.Thread):
-    def __init__(self, in_queue: queue.Queue, out_queue: queue.Queue):
+    def __init__(self, in_queue: queue.Queue, out_queue: queue.Queue, sessions=None):
         super().__init__()
         self._inQueue = in_queue
         self._outQueue = out_queue
-        self._exceptionList = []
+        self._sessions = sessions if sessions is not None else requests.session()
 
     def run(self):
         while True:
-            _query = ''
             hitsOne = self._inQueue.get()
             if hitsOne:
                 try:
-                    # if Config.PROXY:
-                    #     response = requests.get(url=(Config.BASE_URL % hitsOne),
-                    #                             proxies=Config.PROXY, verify=None)
-                    # else:
-                    response = ResponseBase(requests.get(url=(Config.BASE_URL % hitsOne)))
+                    if Config.PROXY:
+                        response = ResponseBase(self._sessions.get(url=('%s%s' % (Config.BASE_URL, hitsOne)),
+                                                                   proxies=Config.PROXY, verify=False))
+                    else:
+                        response = ResponseBase(self._sessions.get(url=('%s%s' % (Config.BASE_URL, hitsOne)),
+                                                                   timeout=300))
 
-                    _query = response.content.get('query', None)
+                    if isinstance(response.content, dict):
+                        _query = response.content.get('query', [])
+                    else:
+                        _query = []
                     if _query is not None:
                         self._outQueue.put({'hint': hitsOne, 'query': _query})
-                        print({hitsOne: _query})
+                        # print({hitsOne: _query})
 
                 except Exception as ex:
                     traceback_lines = traceback.format_exception(ex.__class__, ex, ex.__traceback__)
-                    self._exceptionList.append(('\n--- %s: Hint:"%s". ---\n' %
-                                                (datetime.datetime.now().isoformat(sep='z'),
-                                                 hitsOne)))
-                    self._exceptionList.extend(traceback_lines)
+                    traceback_info = ('\n--- %s: ExecutorBase. Hint:"%s". ---\n' %
+                                      (datetime.datetime.now().isoformat(sep='z'),
+                                       hitsOne))
+                    print(traceback_info)
+                    print(traceback_lines)
 
                 self._inQueue.task_done()
-
-    @property
-    def exceptionList(self):
-        exceptionList = copy.copy(self._exceptionList)
-        self._exceptionList.clear()
-        return exceptionList

@@ -12,9 +12,6 @@ class ResponseBase():
 
     @property
     def content(self):
-        # Content-Type: application/json
-        # Content-Type: text/xml; charset=utf-
-
         if self._response is not None:
             if self._content is None:
                 self._content = ''
@@ -60,4 +57,3 @@ class ResponseBase():
     def fromXML(self):
         if self._response is not None:
             return xmltodict.parse(xml_input=self._response.content)
-

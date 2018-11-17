@@ -1,5 +1,8 @@
 import queue
 import threading
+import traceback
+import datetime
+from peewee import *
 
 from hint import Hint
 
@@ -27,10 +30,15 @@ class CreatorHintsBase(threading.Thread):
     def run(self):
         for promt in generator_word():
             try:
-                r = Hint.get(Hint.key == promt)
-            except Exception as ex:
-                r = ''
-
-            if not r:
+                Hint.get(Hint.key == promt)
+            except DoesNotExist:
                 self._exec_queue.put(promt)
-
+            except IntegrityError:
+                pass
+            except Exception as ex:
+                traceback_lines = traceback.format_exception(ex.__class__, ex, ex.__traceback__)
+                traceback_info = ('\n--- %s: CreatorHintsBase.Hint.key == :"%s". ---\n' %
+                                  (datetime.datetime.now().isoformat(sep='z'),
+                                   promt))
+                print(traceback_info)
+                print(traceback_lines)

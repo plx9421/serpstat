@@ -1,4 +1,8 @@
 import queue
+import time
+
+import requests
+from requests.adapters import HTTPAdapter
 
 from config import Config
 from creator_hints import CreatorHintsBase
@@ -7,9 +11,17 @@ from investigator import ExecutorBase
 from worker import WorkerBase
 
 if __name__ == '__main__':
+    hs = requests.session()
+    ha = HTTPAdapter(
+        pool_connections=1,
+        pool_maxsize=Config.THREAD_COUNT,
+        max_retries=5
+    )
+    hs.mount('https://', ha)
+    hs.mount('http://', ha)
+
     Hint.create_table()
 
-    executorList = []
     queueForExecute = queue.Queue()
     queueForResponse = queue.Queue()
 
@@ -19,15 +31,20 @@ if __name__ == '__main__':
 
     for i in range(Config.THREAD_COUNT):
         e = ExecutorBase(in_queue=queueForExecute,
-                         out_queue=queueForResponse)
+                         out_queue=queueForResponse,
+                         sessions=hs)
         e.daemon = True
-        executorList.append(e)
         e.start()
 
     workerThread = WorkerBase(response_queue=queueForResponse)
     workerThread.daemon = True
     workerThread.start()
 
-    workerThread.join(10)
+    creatorHints.join()
 
-    print()
+    while True:
+        time.sleep(10)
+        if queueForExecute.empty() and queueForResponse.empty():
+            break
+
+    print('Finita la comedia')
