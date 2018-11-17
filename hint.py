@@ -1,7 +1,8 @@
 from peewee import *
-from .config import Config
+from config import Config
 
 db = SqliteDatabase(Config.DATABASE_URI)
+# db.connect()
 
 class Hint(Model):
     key = CharField(index=True, unique=True)
@@ -10,3 +11,4 @@ class Hint(Model):
 
     class Meta:
         database = db
+
