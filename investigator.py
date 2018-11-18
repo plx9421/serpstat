@@ -9,7 +9,7 @@ from config import Config
 from response import ResponseBase
 
 
-class ExecutorBase(threading.Thread):
+class investigatorBase(threading.Thread):
     def __init__(self, in_queue: queue.Queue, out_queue: queue.Queue, sessions=None):
         super().__init__()
         self._inQueue = in_queue
@@ -27,6 +27,14 @@ class ExecutorBase(threading.Thread):
                     else:
                         response = ResponseBase(self._sessions.get(url=('%s%s' % (Config.BASE_URL, hitsOne)),
                                                                    timeout=300))
+
+                    if response.status_code not in [200, 201, 204]:
+                        print('request is : %s' % ('%s%s' % (Config.BASE_URL, hitsOne)))
+                        print(
+                            "response.status_code not in [200, 201, 204]. \nStatus code: {0}. \nReason: {1}.\nContent: {2}.\nLocation: {3}.Run".format(
+                                response.status_code, response.reason, response.content,self.__class__.__name__))
+                        print('Thread stoped\n')
+                        return
 
                     if isinstance(response.content, dict):
                         _query = response.content.get('query', [])
